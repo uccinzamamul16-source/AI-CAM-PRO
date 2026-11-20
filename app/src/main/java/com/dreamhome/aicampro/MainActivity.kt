@@ -1,6 +1,8 @@
 package com.dreamhome.aicampro
 
 import android.os.Bundle
+import android.net.Uri
+import android.widget.ImageView
 import java.util.Locale
 import java.text.SimpleDateFormat
 import java.io.File
@@ -393,6 +395,11 @@ private fun CameraStudioScreen(surface: Color, foreground: Color, muted: Color) 
     }
     var imageCapture by remember { mutableStateOf<ImageCapture?>(null) }
     var cameraMessage by remember { mutableStateOf("Camera permission is required to take photos.") }
+    var selectedPhotoUri by remember { mutableStateOf<Uri?>(null) }
+    val galleryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        selectedPhotoUri = uri
+        if (uri != null) cameraMessage = "Gallery photo selected. AI editing tools will be connected in a later stage."
+    }
     val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         hasCameraPermission = granted
         cameraMessage = if (granted) "Camera is ready." else "Camera permission was not granted. Enable it in app settings to use Camera Studio."
@@ -463,6 +470,21 @@ private fun CameraStudioScreen(surface: Color, foreground: Color, muted: Color) 
                 Icon(Icons.Default.PhotoCamera, contentDescription = null)
                 Text("  Capture Photo")
             }
+
+            androidx.compose.material3.OutlinedButton(
+                onClick = { galleryLauncher.launch("image/*") },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Default.Collections, contentDescription = null)
+                Text("  Choose Photo from Gallery")
+            }
+            selectedPhotoUri?.let { uri ->
+                AndroidView(
+                    factory = { ctx -> ImageView(ctx).apply { scaleType = ImageView.ScaleType.FIT_CENTER } },
+                    update = { view -> view.setImageURI(uri) },
+                    modifier = Modifier.fillMaxWidth().height(180.dp)
+                )
+            }
         } else {
             Card(colors = CardDefaults.cardColors(containerColor = surface), shape = RoundedCornerShape(16.dp)) {
                 Column(modifier = Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -475,6 +497,6 @@ private fun CameraStudioScreen(surface: Color, foreground: Color, muted: Color) 
                 }
             }
         }
-        Text("Captured photos are stored in app-specific storage. Video recording and editing will be added separately.", color = muted, fontSize = 12.sp)
+        Text("Captured photos are stored in app-specific storage. Gallery selection is local; no photo is uploaded. Video recording and editing will be added separately.", color = muted, fontSize = 12.sp)
     }
 }
