@@ -309,6 +309,10 @@ private fun ModuleDetailScreen(
                 MaterialRatesScreen(surface = surface, foreground = foreground, muted = muted)
             } else if (module.title == "Quotations") {
                 QuotationMakerScreen(surface = surface, foreground = foreground, muted = muted)
+            } else if (module.title == "Payments") {
+                PaymentsScreen(surface = surface, foreground = foreground, muted = muted)
+            } else if (module.title == "Business Reports") {
+                BusinessReportsScreen(surface = surface, foreground = foreground, muted = muted)
             } else {
                 Icon(module.icon, contentDescription = null, tint = Gold, modifier = Modifier.size(42.dp))
                 Spacer(modifier = Modifier.height(12.dp))
