@@ -301,6 +301,10 @@ private fun ModuleDetailScreen(
                 CameraStudioScreen(surface = surface, foreground = foreground, muted = muted)
             } else if (module.title == "Measurements") {
                 MeasurementCalculator(surface = surface, foreground = foreground, muted = muted)
+            } else if (module.title == "Customers") {
+                BusinessRecordsScreen(isProjects = false, surface = surface, foreground = foreground, muted = muted)
+            } else if (module.title == "Projects") {
+                BusinessRecordsScreen(isProjects = true, surface = surface, foreground = foreground, muted = muted)
             } else {
                 Icon(module.icon, contentDescription = null, tint = Gold, modifier = Modifier.size(42.dp))
                 Spacer(modifier = Modifier.height(12.dp))
