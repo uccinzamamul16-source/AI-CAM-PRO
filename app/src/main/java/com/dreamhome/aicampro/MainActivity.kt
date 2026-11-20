@@ -186,7 +186,8 @@ private fun AiCamProApp() {
                     surface = surface,
                     foreground = foreground,
                     muted = muted,
-                    onBack = { selectedModule = null }
+                    onBack = { selectedModule = null },
+                    onToggleTheme = { darkTheme = !darkTheme }
                 )
             }
         }
@@ -283,7 +284,8 @@ private fun ModuleDetailScreen(
     surface: Color,
     foreground: Color,
     muted: Color,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onToggleTheme: () -> Unit
 ) {
     Scaffold(
         containerColor = if (darkTheme) DarkBackground else LightBackground,
@@ -343,6 +345,16 @@ private fun ModuleDetailScreen(
                 PaymentsScreen(surface = surface, foreground = foreground, muted = muted)
             } else if (module.title == "Business Reports") {
                 BusinessReportsScreen(surface = surface, foreground = foreground, muted = muted)
+            } else if (module.title == "AI Photo Studio") {
+                AiPhotoStudioScreen(surface = surface, foreground = foreground, muted = muted)
+            } else if (module.title == "My Designs") {
+                MyDesignsScreen(surface = surface, foreground = foreground, muted = muted)
+            } else if (module.title == "Private Gallery") {
+                PrivateGalleryScreen(surface = surface, foreground = foreground, muted = muted)
+            } else if (module.title == "Backup & Restore") {
+                BackupRestoreScreen(surface = surface, foreground = foreground, muted = muted)
+            } else if (module.title == "App Appearance") {
+                AppAppearanceScreen(darkTheme = darkTheme, onToggleTheme = onToggleTheme, surface = surface, foreground = foreground, muted = muted)
             } else {
                 Icon(module.icon, contentDescription = null, tint = Gold, modifier = Modifier.size(42.dp))
                 Spacer(modifier = Modifier.height(12.dp))
