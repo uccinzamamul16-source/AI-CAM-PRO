@@ -75,6 +75,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.key
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -394,6 +395,7 @@ private fun CameraStudioScreen(surface: Color, foreground: Color, muted: Color) 
         mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED)
     }
     var imageCapture by remember { mutableStateOf<ImageCapture?>(null) }
+    var useFrontCamera by remember { mutableStateOf(false) }
     var cameraMessage by remember { mutableStateOf("Camera permission is required to take photos.") }
     var selectedPhotoUri by remember { mutableStateOf<Uri?>(null) }
     val galleryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
@@ -409,36 +411,45 @@ private fun CameraStudioScreen(surface: Color, foreground: Color, muted: Color) 
         Text("Camera Studio", color = foreground, fontSize = 23.sp, fontWeight = FontWeight.Bold)
         Text("Capture photos directly inside AI CAM PRO. Images stay in this app's local media folder.", color = muted, fontSize = 13.sp)
         if (hasCameraPermission) {
-            AndroidView(
-                factory = { ctx ->
-                    val previewView = PreviewView(ctx).apply {
-                        scaleType = PreviewView.ScaleType.FILL_CENTER
-                    }
-                    val cameraProviderFuture = ProcessCameraProvider.getInstance(ctx)
-                    cameraProviderFuture.addListener({
-                        try {
-                            val cameraProvider = cameraProviderFuture.get()
-                            val preview = Preview.Builder().build().also { it.setSurfaceProvider(previewView.surfaceProvider) }
-                            val capture = ImageCapture.Builder()
-                                .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
-                                .build()
-                            cameraProvider.unbindAll()
-                            cameraProvider.bindToLifecycle(
-                                lifecycleOwner,
-                                CameraSelector.DEFAULT_BACK_CAMERA,
-                                preview,
-                                capture
-                            )
-                            imageCapture = capture
-                            cameraMessage = "Camera ready. Tap Capture Photo."
-                        } catch (error: Exception) {
-                            cameraMessage = "Unable to start camera: " + (error.message ?: "unknown error")
-                        }
-                    }, ContextCompat.getMainExecutor(ctx))
-                    previewView
+            androidx.compose.material3.OutlinedButton(
+                onClick = {
+                    useFrontCamera = !useFrontCamera
+                    imageCapture = null
+                    cameraMessage = "Switching camera..."
                 },
-                modifier = Modifier.fillMaxWidth().weight(1f)
-            )
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(if (useFrontCamera) "Switch to Rear Camera" else "Switch to Front Camera")
+            }
+            key(useFrontCamera) {
+                AndroidView(
+                    factory = { ctx ->
+                        val previewView = PreviewView(ctx).apply {
+                            scaleType = PreviewView.ScaleType.FILL_CENTER
+                        }
+                        val cameraProviderFuture = ProcessCameraProvider.getInstance(ctx)
+                        cameraProviderFuture.addListener({
+                            try {
+                                val cameraProvider = cameraProviderFuture.get()
+                                val preview = Preview.Builder().build().also { it.setSurfaceProvider(previewView.surfaceProvider) }
+                                val capture = ImageCapture.Builder()
+                                    .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
+                                    .build()
+                                cameraProvider.unbindAll()
+                                val selector = if (useFrontCamera) CameraSelector.DEFAULT_FRONT_CAMERA else CameraSelector.DEFAULT_BACK_CAMERA
+                                cameraProvider.bindToLifecycle(lifecycleOwner, selector, preview, capture)
+                                imageCapture = capture
+                                cameraMessage = if (useFrontCamera) "Front camera ready." else "Rear camera ready."
+                            } catch (error: Exception) {
+                                imageCapture = null
+                                cameraMessage = "Unable to start camera: " + (error.message ?: "camera may not be available")
+                            }
+                        }, ContextCompat.getMainExecutor(ctx))
+                        previewView
+                    },
+                    modifier = Modifier.fillMaxWidth().weight(1f)
+                )
+            }
             Card(colors = CardDefaults.cardColors(containerColor = surface), shape = RoundedCornerShape(12.dp)) {
                 Text(cameraMessage, color = muted, fontSize = 12.sp, modifier = Modifier.padding(12.dp))
             }
