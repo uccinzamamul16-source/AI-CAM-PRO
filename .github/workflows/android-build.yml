@@ -2,7 +2,7 @@ name: Android Debug Build
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "free-ai-tryon-webview" ]
   workflow_dispatch:
 
 permissions:
