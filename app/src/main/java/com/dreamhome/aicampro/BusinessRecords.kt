@@ -32,6 +32,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
+private val RecordGold = Color(0xFFD2AA58)
+
 private data class CustomerRecord(val id: Long, val name: String, val phone: String, val address: String)
 private data class ProjectRecord(val id: Long, val name: String, val customer: String, val site: String, val area: String, val status: String)
 
@@ -104,9 +106,9 @@ internal fun BusinessRecordsScreen(isProjects: Boolean, surface: Color, foregrou
                 if (phone.isBlank()) message = "Enter a phone number." else { db.addCustomer(name.trim(), phone.trim(), address.trim()); customerItems.clear(); customerItems.addAll(db.customers()); name = ""; phone = ""; address = ""; message = "Customer saved on this device." }
             }
         }, modifier = Modifier.fillMaxWidth()) { Text(if (isProjects) "Save Project" else "Save Customer") }
-        if (message.isNotBlank()) Text(message, color = Gold, fontSize = 12.sp)
+        if (message.isNotBlank()) Text(message, color = RecordGold, fontSize = 12.sp)
         Spacer(Modifier.height(4.dp))
-        Text(if (isProjects) "Saved projects (${projectItems.size})" else "Saved customers (${customerItems.size})", color = Gold, fontWeight = FontWeight.Bold)
+        Text(if (isProjects) "Saved projects (${projectItems.size})" else "Saved customers (${customerItems.size})", color = RecordGold, fontWeight = FontWeight.Bold)
         LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             if (isProjects) items(projectItems, key = { it.id }) { item ->
                 Card(colors = CardDefaults.cardColors(containerColor = surface), shape = RoundedCornerShape(12.dp)) {
@@ -114,7 +116,7 @@ internal fun BusinessRecordsScreen(isProjects: Boolean, surface: Color, foregrou
                         Text(item.name, color = foreground, fontWeight = FontWeight.SemiBold)
                         Text("Customer: ${item.customer.ifBlank { "Not specified" }}", color = muted, fontSize = 12.sp)
                         Text("Site: ${item.site}", color = muted, fontSize = 12.sp)
-                        Row { Text("Area: ${item.area.ifBlank { "—" }} sq ft", color = muted, fontSize = 12.sp); Spacer(Modifier.weight(1f)); Text(item.status, color = Gold, fontSize = 12.sp) }
+                        Row { Text("Area: ${item.area.ifBlank { "—" }} sq ft", color = muted, fontSize = 12.sp); Spacer(Modifier.weight(1f)); Text(item.status, color = RecordGold, fontSize = 12.sp) }
                     }
                 }
             } else items(customerItems, key = { it.id }) { item ->
