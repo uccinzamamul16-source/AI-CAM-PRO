@@ -230,14 +230,42 @@ private fun DashboardScreen(
         }
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
-            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                Text("Your workspace", color = foreground, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                Text("Design, calculate and manage your projects", color = muted, fontSize = 13.sp)
+            Card(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+                shape = RoundedCornerShape(22.dp),
+                colors = CardDefaults.cardColors(containerColor = surface),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(18.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    Box(
+                        modifier = Modifier.size(52.dp).background(Gold.copy(alpha = 0.16f), RoundedCornerShape(17.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = Gold, modifier = Modifier.size(28.dp))
+                    }
+                    Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("Your workspace", color = foreground, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                        Text("Design • calculate • manage", color = muted, fontSize = 12.sp)
+                        Text("SMART TOOLS FOR YOUR BUSINESS", color = Gold, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                    }
+                }
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(start = 18.dp, end = 18.dp, top = 4.dp, bottom = 2.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text("EXPLORE TOOLS", color = foreground, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                Text("${appModules.size} MODULES", color = Gold, fontSize = 10.sp, fontWeight = FontWeight.Bold)
             }
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(14.dp),
+                modifier = Modifier.fillMaxSize().weight(1f),
+                contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 10.dp, bottom = 18.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
@@ -258,20 +286,30 @@ private fun ModuleCard(
     onClick: () -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth().height(142.dp).clickable(onClick = onClick),
-        shape = RoundedCornerShape(18.dp),
+        modifier = Modifier.fillMaxWidth().height(154.dp).clickable(onClick = onClick),
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Column(modifier = Modifier.padding(15.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Box(
-                modifier = Modifier.size(38.dp).background(Gold.copy(alpha = 0.15f), RoundedCornerShape(12.dp)),
-                contentAlignment = Alignment.Center
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(15.dp),
+            verticalArrangement = Arrangement.spacedBy(9.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(module.icon, contentDescription = null, tint = Gold, modifier = Modifier.size(22.dp))
+                Box(
+                    modifier = Modifier.size(44.dp).background(Gold.copy(alpha = 0.16f), RoundedCornerShape(14.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(module.icon, contentDescription = null, tint = Gold, modifier = Modifier.size(23.dp))
+                }
+                Icon(Icons.Default.ArrowBack, contentDescription = null, tint = Gold.copy(alpha = 0.65f), modifier = Modifier.size(16.dp))
             }
-            Text(module.title, color = foreground, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
-            Text(module.subtitle, color = muted, fontSize = 11.sp, lineHeight = 14.sp)
+            Text(module.title, color = foreground, fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 1)
+            Text(module.subtitle, color = muted, fontSize = 11.sp, lineHeight = 15.sp, maxLines = 2)
         }
     }
 }
