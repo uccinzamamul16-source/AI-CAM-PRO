@@ -46,6 +46,8 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -61,6 +63,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -264,26 +268,96 @@ private fun ModuleDetailScreen(
         }
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding).padding(20.dp)) {
-            Icon(module.icon, contentDescription = null, tint = Gold, modifier = Modifier.size(42.dp))
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(module.title, color = foreground, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-            Text(module.subtitle, color = muted, fontSize = 14.sp)
-            Spacer(modifier = Modifier.height(20.dp))
-            module.details.forEach { item ->
-                Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.Top) {
-                    Text("•", color = Gold, fontSize = 18.sp, modifier = Modifier.padding(end = 10.dp))
-                    Text(item, color = foreground, fontSize = 15.sp, lineHeight = 21.sp)
+            if (module.title == "Measurements") {
+                MeasurementCalculator(surface = surface, foreground = foreground, muted = muted)
+            } else {
+                Icon(module.icon, contentDescription = null, tint = Gold, modifier = Modifier.size(42.dp))
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(module.title, color = foreground, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                Text(module.subtitle, color = muted, fontSize = 14.sp)
+                Spacer(modifier = Modifier.height(20.dp))
+                module.details.forEach { item ->
+                    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.Top) {
+                        Text("•", color = Gold, fontSize = 18.sp, modifier = Modifier.padding(end = 10.dp))
+                        Text(item, color = foreground, fontSize = 15.sp, lineHeight = 21.sp)
+                    }
+                }
+                Spacer(modifier = Modifier.height(18.dp))
+                Card(colors = CardDefaults.cardColors(containerColor = surface), shape = RoundedCornerShape(14.dp)) {
+                    Text(
+                        "This screen is part of the app foundation. Individual tools and AI services will be enabled in development stages.",
+                        color = muted,
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(16.dp)
+                    )
                 }
             }
-            Spacer(modifier = Modifier.height(18.dp))
-            Card(colors = CardDefaults.cardColors(containerColor = surface), shape = RoundedCornerShape(14.dp)) {
-                Text(
-                    "This screen is part of the app foundation. Individual tools and AI services will be enabled in development stages.",
-                    color = muted,
-                    fontSize = 12.sp,
-                    modifier = Modifier.padding(16.dp)
-                )
+        }
+    }
+}
+
+
+@Composable
+private fun MeasurementCalculator(surface: Color, foreground: Color, muted: Color) {
+    var roomName by remember { mutableStateOf("Bedroom") }
+    var length by remember { mutableStateOf("") }
+    var width by remember { mutableStateOf("") }
+    var tileLength by remember { mutableStateOf("2") }
+    var tileWidth by remember { mutableStateOf("4") }
+    var wastage by remember { mutableStateOf("10") }
+
+    val l = length.toDoubleOrNull() ?: 0.0
+    val w = width.toDoubleOrNull() ?: 0.0
+    val tl = tileLength.toDoubleOrNull() ?: 0.0
+    val tw = tileWidth.toDoubleOrNull() ?: 0.0
+    val waste = (wastage.toDoubleOrNull() ?: 0.0).coerceIn(0.0, 100.0)
+    val area = l * w
+    val tileArea = tl * tw
+    val tileCount = if (area > 0 && tileArea > 0) kotlin.math.ceil(area / tileArea * (1.0 + waste / 100.0)).toInt() else 0
+
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text("Room measurement", color = foreground, fontSize = 23.sp, fontWeight = FontWeight.Bold)
+        Text("Enter dimensions in feet. Estimates update automatically.", color = muted, fontSize = 13.sp)
+        OutlinedTextField(value = roomName, onValueChange = { roomName = it }, label = { Text("Room name") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            NumberField("Length (ft)", length, { length = it }, Modifier.weight(1f))
+            NumberField("Width (ft)", width, { width = it }, Modifier.weight(1f))
+        }
+        Text("Tile size (feet)", color = Gold, fontWeight = FontWeight.SemiBold)
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            NumberField("Tile length", tileLength, { tileLength = it }, Modifier.weight(1f))
+            NumberField("Tile width", tileWidth, { tileWidth = it }, Modifier.weight(1f))
+        }
+        NumberField("Wastage (%)", wastage, { wastage = it }, Modifier.fillMaxWidth())
+        Card(colors = CardDefaults.cardColors(containerColor = surface), shape = RoundedCornerShape(16.dp)) {
+            Column(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("$roomName estimate", color = Gold, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                ResultLine("Floor area", "%.2f sq ft".format(area), foreground, muted)
+                ResultLine("Tile area", if (tileArea > 0) "%.2f sq ft".format(tileArea) else "—", foreground, muted)
+                ResultLine("Wastage included", "$waste%", foreground, muted)
+                ResultLine("Tiles required", if (tileCount > 0) "$tileCount tiles" else "Enter valid dimensions", foreground, muted)
             }
         }
+        Text("Tile count is rounded up and includes the selected wastage. This is an estimate; cutting pattern and site conditions can change actual quantity.", color = muted, fontSize = 12.sp)
+    }
+}
+
+@Composable
+private fun NumberField(label: String, value: String, onValueChange: (String) -> Unit, modifier: Modifier = Modifier) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = { input -> if (input.isEmpty() || input.matches(Regex("^\\\\d*(\\\\.\\\\d*)?$"))) onValueChange(input) },
+        label = { Text(label) },
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+        modifier = modifier
+    )
+}
+
+@Composable
+private fun ResultLine(label: String, value: String, foreground: Color, muted: Color) {
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        Text(label, color = muted, fontSize = 13.sp)
+        Text(value, color = foreground, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
     }
 }
