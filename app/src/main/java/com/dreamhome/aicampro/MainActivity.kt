@@ -367,7 +367,7 @@ private fun MeasurementCalculator(surface: Color, foreground: Color, muted: Colo
 private fun NumberField(label: String, value: String, onValueChange: (String) -> Unit, modifier: Modifier = Modifier) {
     OutlinedTextField(
         value = value,
-        onValueChange = { input -> if (input.isEmpty() || input.matches(Regex("^\\\\d*(\\\\.\\\\d*)?$"))) onValueChange(input) },
+        onValueChange = { input -> if (input.isEmpty() || input.matches(Regex("^\\d*(\\.\\d*)?$"))) onValueChange(input) },
         label = { Text(label) },
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
