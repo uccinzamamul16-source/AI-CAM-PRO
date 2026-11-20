@@ -305,6 +305,20 @@ private fun ModuleDetailScreen(
                 CameraStudioScreen(surface = surface, foreground = foreground, muted = muted)
             } else if (module.title == "AI Clothes Changer") {
                 FreeAiTryOnScreen(surface = surface, foreground = foreground, muted = muted)
+            } else if (module.title == "Background Studio") {
+                FreeWebAiScreen(
+                    title = "Free Background Studio",
+                    description = "Remove a photo background in your browser. The selected tool says processing happens on your device, without uploading the photo.",
+                    url = "https://kitlibre.com/remove-bg/",
+                    surface = surface, foreground = foreground, muted = muted
+                )
+            } else if (module.title == "Interior AI Studio") {
+                FreeWebAiScreen(
+                    title = "Free Interior AI Studio",
+                    description = "Upload a room photo, choose a design style and generate a redesign. Free use is limited to five redesigns per hour according to the service.",
+                    url = "https://www.freeredesign.com/",
+                    surface = surface, foreground = foreground, muted = muted
+                )
             } else if (module.title == "Measurements") {
                 MeasurementCalculator(surface = surface, foreground = foreground, muted = muted)
             } else if (module.title == "Customers") {
@@ -389,6 +403,35 @@ private fun FreeAiTryOnScreen(surface: Color, foreground: Color, muted: Color) {
                         }
                     }
                     loadUrl("https://yisol-idm-vton.hf.space/")
+                }
+            },
+            modifier = Modifier.fillMaxWidth().weight(1f)
+        )
+    }
+}
+
+@Composable
+private fun FreeWebAiScreen(
+    title: String,
+    description: String,
+    url: String,
+    surface: Color,
+    foreground: Color,
+    muted: Color
+) {
+    Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(title, color = foreground, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+        Card(colors = CardDefaults.cardColors(containerColor = surface), shape = RoundedCornerShape(12.dp)) {
+            Text(description, color = muted, fontSize = 12.sp, modifier = Modifier.padding(12.dp))
+        }
+        AndroidView(
+            factory = { ctx ->
+                WebView(ctx).apply {
+                    settings.javaScriptEnabled = true
+                    settings.domStorageEnabled = true
+                    settings.allowFileAccess = false
+                    webViewClient = WebViewClient()
+                    loadUrl(url)
                 }
             },
             modifier = Modifier.fillMaxWidth().weight(1f)
