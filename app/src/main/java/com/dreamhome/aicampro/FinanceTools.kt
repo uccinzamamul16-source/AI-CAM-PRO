@@ -44,6 +44,10 @@ private class FinanceDatabase(context: Context) : SQLiteOpenHelper(context, "ai_
         val values = ContentValues().apply { put("name", name); put("unit", unit); put("rate", rate) }
         writableDatabase.insert("material_rates", null, values)
     }
+    fun updateRate(id: Long, name: String, unit: String, rate: Double) {
+        val values = ContentValues().apply { put("name", name); put("unit", unit); put("rate", rate) }
+        writableDatabase.update("material_rates", values, "id=?", arrayOf(id.toString()))
+    }
     fun rates(): List<MaterialRate> {
         val result = mutableListOf<MaterialRate>()
         readableDatabase.query("material_rates", null, null, null, null, null, "name COLLATE NOCASE ASC").use { c ->
@@ -63,6 +67,7 @@ internal fun MaterialRatesScreen(surface: Color, foreground: Color, muted: Color
     var unit by remember { mutableStateOf("sq ft") }
     var rate by remember { mutableStateOf("") }
     var message by remember { mutableStateOf("") }
+    var editingId by remember { mutableStateOf<Long?>(null) }
     fun refresh() { rates.clear(); rates.addAll(db.rates()) }
     LaunchedEffect(Unit) { refresh() }
     Column(verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxSize()) {
@@ -76,8 +81,8 @@ internal fun MaterialRatesScreen(surface: Color, foreground: Color, muted: Color
         Button(onClick = {
             val amount = rate.toDoubleOrNull()
             if (name.isBlank() || unit.isBlank() || amount == null || amount < 0) message = "Enter material, unit and a valid rate."
-            else { db.addRate(name.trim(), unit.trim(), amount); name = ""; rate = ""; message = "Rate saved."; refresh() }
-        }, modifier = Modifier.fillMaxWidth()) { Text("Save Material Rate") }
+            else { val id = editingId; if (id == null) { db.addRate(name.trim(), unit.trim(), amount); message = "Rate saved." } else { db.updateRate(id, name.trim(), unit.trim(), amount); editingId = null; message = "Rate updated." }; name = ""; rate = ""; unit = "sq ft"; refresh() }
+        }, modifier = Modifier.fillMaxWidth()) { Text(if (editingId == null) "Save Material Rate" else "Update Material Rate") }
         if (message.isNotBlank()) Text(message, color = FinanceGold, fontSize = 12.sp)
         Text("Saved rates (${rates.size})", color = FinanceGold, fontWeight = FontWeight.Bold)
         LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.weight(1f)) {
@@ -85,12 +90,12 @@ internal fun MaterialRatesScreen(surface: Color, foreground: Color, muted: Color
                 Card(colors = CardDefaults.cardColors(containerColor = surface), shape = RoundedCornerShape(12.dp)) {
                     Row(Modifier.fillMaxWidth().padding(12.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) { Text(item.name, color = foreground, fontWeight = FontWeight.SemiBold); Text("₹${"%.2f".format(item.rate)} / ${item.unit}", color = muted, fontSize = 12.sp) }
-                        TextButton(onClick = { db.deleteRate(item.id); refresh() }) { Text("Delete", color = FinanceGold) }
+                        Row { TextButton(onClick = { editingId = item.id; name = item.name; unit = item.unit; rate = item.rate.toString(); message = "Editing ${item.name}" }) { Text("Edit", color = FinanceGold) }; TextButton(onClick = { if (editingId == item.id) { editingId = null; name = ""; rate = "" }; db.deleteRate(item.id); refresh() }) { Text("Delete", color = FinanceGold) } }
                     }
                 }
             }
         }
-        Text("Old rates are retained only as values copied into quotations; editing history is not yet available.", color = muted, fontSize = 11.sp)
+        Text("Rates can be edited or deleted. Historical rate snapshots are not yet available.", color = muted, fontSize = 11.sp)
     }
 }
 
