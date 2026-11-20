@@ -16,6 +16,7 @@ import androidx.camera.core.Preview
 import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.CameraSelector
+import androidx.camera.core.Camera
 import androidx.camera.video.FileOutputOptions
 import androidx.camera.video.Quality
 import androidx.camera.video.QualitySelector
@@ -575,8 +576,11 @@ private fun CameraStudioScreen(surface: Color, foreground: Color, muted: Color) 
     var imageCapture by remember { mutableStateOf<ImageCapture?>(null) }
     var videoCapture by remember { mutableStateOf<VideoCapture<Recorder>?>(null) }
     var activeRecording by remember { mutableStateOf<Recording?>(null) }
+    var boundCamera by remember { mutableStateOf<Camera?>(null) }
     var isRecording by remember { mutableStateOf(false) }
     var useFrontCamera by remember { mutableStateOf(false) }
+    var flashEnabled by remember { mutableStateOf(false) }
+    var hasFlash by remember { mutableStateOf(false) }
     var cameraMessage by remember { mutableStateOf("Camera permission is required to take photos.") }
     var selectedPhotoUri by remember { mutableStateOf<Uri?>(null) }
     val galleryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
@@ -588,31 +592,45 @@ private fun CameraStudioScreen(surface: Color, foreground: Color, muted: Color) 
         cameraMessage = if (granted) "Camera is ready." else "Camera permission was not granted. Enable it in app settings to use Camera Studio."
     }
 
-    Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text("Camera Studio", color = foreground, fontSize = 23.sp, fontWeight = FontWeight.Bold)
-        Text("Capture photos directly inside AI CAM PRO. Images stay in this app's local media folder.", color = muted, fontSize = 13.sp)
-        if (hasCameraPermission) {
-            androidx.compose.material3.OutlinedButton(
-                onClick = {
-                    useFrontCamera = !useFrontCamera
-                    if (isRecording) {
-                        activeRecording?.stop()
-                        activeRecording = null
-                        isRecording = false
-                    }
-                    imageCapture = null
-                    videoCapture = null
-                    cameraMessage = "Switching camera..."
-                },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(if (useFrontCamera) "Switch to Rear Camera" else "Switch to Front Camera")
+    Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 2.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text("Camera Studio", color = foreground, fontSize = 21.sp, fontWeight = FontWeight.Bold)
+                Text("Full-screen preview • Photo & video", color = muted, fontSize = 11.sp)
             }
+            if (hasCameraPermission) {
+                androidx.compose.material3.OutlinedButton(
+                    onClick = {
+                        if (flashEnabled) boundCamera?.cameraControl?.enableTorch(false)
+                        flashEnabled = false
+                        useFrontCamera = !useFrontCamera
+                        if (isRecording) {
+                            activeRecording?.stop()
+                            activeRecording = null
+                            isRecording = false
+                        }
+                        imageCapture = null
+                        videoCapture = null
+                        boundCamera = null
+                        hasFlash = false
+                        cameraMessage = "Switching camera..."
+                    }
+                ) {
+                    Text(if (useFrontCamera) "Rear" else "Front")
+                }
+            }
+        }
+        if (hasCameraPermission) {
             key(useFrontCamera) {
                 AndroidView(
                     factory = { ctx ->
                         val previewView = PreviewView(ctx).apply {
                             scaleType = PreviewView.ScaleType.FILL_CENTER
+                            implementationMode = PreviewView.ImplementationMode.COMPATIBLE
                         }
                         val cameraProviderFuture = ProcessCameraProvider.getInstance(ctx)
                         cameraProviderFuture.addListener({
@@ -628,12 +646,18 @@ private fun CameraStudioScreen(surface: Color, foreground: Color, muted: Color) 
                                 val video = VideoCapture.withOutput(recorder)
                                 cameraProvider.unbindAll()
                                 val selector = if (useFrontCamera) CameraSelector.DEFAULT_FRONT_CAMERA else CameraSelector.DEFAULT_BACK_CAMERA
-                                cameraProvider.bindToLifecycle(lifecycleOwner, selector, preview, capture, video)
+                                val camera = cameraProvider.bindToLifecycle(lifecycleOwner, selector, preview, capture, video)
+                                boundCamera = camera
+                                hasFlash = camera.cameraInfo.hasFlashUnit()
+                                flashEnabled = false
                                 imageCapture = capture
                                 videoCapture = video
                                 cameraMessage = if (useFrontCamera) "Front camera ready." else "Rear camera ready."
                             } catch (error: Exception) {
                                 imageCapture = null
+                                videoCapture = null
+                                boundCamera = null
+                                hasFlash = false
                                 cameraMessage = "Unable to start camera: " + (error.message ?: "camera may not be available")
                             }
                         }, ContextCompat.getMainExecutor(ctx))
@@ -642,97 +666,109 @@ private fun CameraStudioScreen(surface: Color, foreground: Color, muted: Color) 
                     modifier = Modifier.fillMaxWidth().weight(1f)
                 )
             }
-            Card(colors = CardDefaults.cardColors(containerColor = surface), shape = RoundedCornerShape(12.dp)) {
-                Text(cameraMessage, color = muted, fontSize = 12.sp, modifier = Modifier.padding(12.dp))
-            }
-            androidx.compose.material3.Button(
-                onClick = {
-                    val capture = imageCapture
-                    if (capture == null) {
-                        cameraMessage = "Camera is still starting. Please wait."
-                    } else {
-                        val folder = File(context.getExternalFilesDir(Environment.DIRECTORY_PICTURES) ?: context.filesDir, "AI_CAM_PRO")
-                        if (!folder.exists()) folder.mkdirs()
-                        val stamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(System.currentTimeMillis())
-                        val photoFile = File(folder, "AICAM_$stamp.jpg")
-                        val output = ImageCapture.OutputFileOptions.Builder(photoFile).build()
-                        capture.takePicture(output, ContextCompat.getMainExecutor(context), object : ImageCapture.OnImageSavedCallback {
-                            override fun onImageSaved(result: ImageCapture.OutputFileResults) {
-                                cameraMessage = "Photo saved: " + photoFile.name
-                                Toast.makeText(context, "Photo saved in AI CAM PRO", Toast.LENGTH_SHORT).show()
-                            }
-                            override fun onError(exception: ImageCaptureException) {
-                                cameraMessage = "Photo capture failed: " + (exception.message ?: "Please try again")
-                            }
-                        })
-                    }
-                },
+            Row(
                 modifier = Modifier.fillMaxWidth(),
-                enabled = imageCapture != null
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(Icons.Default.PhotoCamera, contentDescription = null)
-                Text("  Capture Photo")
+                androidx.compose.material3.OutlinedButton(
+                    onClick = {
+                        val next = !flashEnabled
+                        boundCamera?.cameraControl?.enableTorch(next)
+                        flashEnabled = next
+                        cameraMessage = if (next) "Flash is ON." else "Flash is OFF."
+                    },
+                    modifier = Modifier.weight(1f),
+                    enabled = hasFlash && boundCamera != null && !useFrontCamera && !isRecording
+                ) {
+                    Text(if (flashEnabled) "Flash ON" else "Flash OFF")
+                }
+                androidx.compose.material3.Button(
+                    onClick = {
+                        val capture = imageCapture
+                        if (capture == null) {
+                            cameraMessage = "Camera is still starting. Please wait."
+                        } else {
+                            val folder = File(context.getExternalFilesDir(Environment.DIRECTORY_PICTURES) ?: context.filesDir, "AI_CAM_PRO")
+                            if (!folder.exists()) folder.mkdirs()
+                            val stamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(System.currentTimeMillis())
+                            val photoFile = File(folder, "AICAM_$stamp.jpg")
+                            val output = ImageCapture.OutputFileOptions.Builder(photoFile).build()
+                            capture.takePicture(output, ContextCompat.getMainExecutor(context), object : ImageCapture.OnImageSavedCallback {
+                                override fun onImageSaved(result: ImageCapture.OutputFileResults) {
+                                    cameraMessage = "Photo saved: " + photoFile.name
+                                    Toast.makeText(context, "Photo saved in AI CAM PRO", Toast.LENGTH_SHORT).show()
+                                }
+                                override fun onError(exception: ImageCaptureException) {
+                                    cameraMessage = "Photo capture failed: " + (exception.message ?: "Please try again")
+                                }
+                            })
+                        }
+                    },
+                    modifier = Modifier.weight(1f),
+                    enabled = imageCapture != null
+                ) {
+                    Icon(Icons.Default.PhotoCamera, contentDescription = null)
+                    Text("  Capture")
+                }
             }
-
-            androidx.compose.material3.Button(
-                onClick = {
-                    val video = videoCapture
-                    if (video == null) {
-                        cameraMessage = "Video camera is still starting. Please wait."
-                    } else if (isRecording) {
-                        activeRecording?.stop()
-                        activeRecording = null
-                        isRecording = false
-                        cameraMessage = "Finishing video..."
-                    } else {
-                        val folder = File(context.getExternalFilesDir(Environment.DIRECTORY_MOVIES) ?: context.filesDir, "AI_CAM_PRO")
-                        if (!folder.exists()) folder.mkdirs()
-                        val stamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(System.currentTimeMillis())
-                        val videoFile = File(folder, "AICAM_$stamp.mp4")
-                        val output = FileOutputOptions.Builder(videoFile).build()
-                        try {
-                            activeRecording = video.output.prepareRecording(context, output)
-                                .start(ContextCompat.getMainExecutor(context)) { event ->
-                                    when (event) {
-                                        is VideoRecordEvent.Start -> {
-                                            isRecording = true
-                                            cameraMessage = "Recording video..."
-                                        }
-                                        is VideoRecordEvent.Finalize -> {
-                                            isRecording = false
-                                            activeRecording = null
-                                            cameraMessage = if (event.hasError()) {
-                                                "Video recording failed. Please try again."
-                                            } else {
-                                                "Video saved: " + videoFile.name
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                androidx.compose.material3.Button(
+                    onClick = {
+                        val video = videoCapture
+                        if (video == null) {
+                            cameraMessage = "Camera is still starting. Please wait."
+                        } else if (isRecording) {
+                            activeRecording?.stop()
+                            activeRecording = null
+                            isRecording = false
+                            cameraMessage = "Finishing video..."
+                        } else {
+                            val folder = File(context.getExternalFilesDir(Environment.DIRECTORY_MOVIES) ?: context.filesDir, "AI_CAM_PRO")
+                            if (!folder.exists()) folder.mkdirs()
+                            val stamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(System.currentTimeMillis())
+                            val videoFile = File(folder, "AICAM_$stamp.mp4")
+                            val output = FileOutputOptions.Builder(videoFile).build()
+                            try {
+                                activeRecording = video.output.prepareRecording(context, output)
+                                    .start(ContextCompat.getMainExecutor(context)) { event ->
+                                        when (event) {
+                                            is VideoRecordEvent.Start -> {
+                                                isRecording = true
+                                                cameraMessage = "Recording video..."
+                                            }
+                                            is VideoRecordEvent.Finalize -> {
+                                                isRecording = false
+                                                activeRecording = null
+                                                cameraMessage = if (event.hasError()) "Video recording failed. Please try again." else "Video saved: " + videoFile.name
                                             }
                                         }
                                     }
-                                }
-                        } catch (error: Exception) {
-                            isRecording = false
-                            cameraMessage = "Unable to record video: " + (error.message ?: "unknown error")
+                            } catch (error: Exception) {
+                                isRecording = false
+                                cameraMessage = "Unable to record video: " + (error.message ?: "unknown error")
+                            }
                         }
-                    }
-                },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = videoCapture != null
-            ) {
-                Text(if (isRecording) "Stop Video Recording" else "Start Video Recording")
+                    },
+                    modifier = Modifier.weight(1f),
+                    enabled = videoCapture != null
+                ) {
+                    Text(if (isRecording) "Stop Video" else "Record Video")
+                }
+                androidx.compose.material3.OutlinedButton(
+                    onClick = { galleryLauncher.launch("image/*") },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(Icons.Default.Collections, contentDescription = null)
+                    Text("  Gallery")
+                }
             }
-
-            androidx.compose.material3.OutlinedButton(
-                onClick = { galleryLauncher.launch("image/*") },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Icon(Icons.Default.Collections, contentDescription = null)
-                Text("  Choose Photo from Gallery")
-            }
+            Text(cameraMessage, color = muted, fontSize = 11.sp, maxLines = 2)
             selectedPhotoUri?.let { uri ->
                 AndroidView(
                     factory = { ctx -> ImageView(ctx).apply { scaleType = ImageView.ScaleType.FIT_CENTER } },
                     update = { view -> view.setImageURI(uri) },
-                    modifier = Modifier.fillMaxWidth().height(180.dp)
+                    modifier = Modifier.fillMaxWidth().height(90.dp)
                 )
             }
         } else {
@@ -747,6 +783,6 @@ private fun CameraStudioScreen(surface: Color, foreground: Color, muted: Color) 
                 }
             }
         }
-        Text("Photos and silent videos are saved in app-specific local storage. Gallery selection stays on this device; nothing is uploaded automatically.", color = muted, fontSize = 12.sp)
+        Text("Flash availability depends on your phone's rear camera. Photos and videos remain in AI CAM PRO's local storage.", color = muted, fontSize = 10.sp)
     }
 }
