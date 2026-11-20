@@ -48,6 +48,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -300,7 +302,15 @@ private fun ModuleDetailScreen(
             )
         }
     ) { padding ->
-        Column(modifier = Modifier.fillMaxSize().padding(padding).padding(20.dp)) {
+        val pageNeedsOwnScrolling = module.title in setOf(
+            "Camera Studio", "AI Clothes Changer", "Background Studio", "Interior AI Studio"
+        )
+        val pageModifier = if (pageNeedsOwnScrolling) {
+            Modifier.fillMaxSize().padding(padding).padding(20.dp)
+        } else {
+            Modifier.fillMaxWidth().padding(padding).padding(20.dp).verticalScroll(rememberScrollState())
+        }
+        Column(modifier = pageModifier) {
             if (module.title == "Camera Studio") {
                 CameraStudioScreen(surface = surface, foreground = foreground, muted = muted)
             } else if (module.title == "AI Clothes Changer") {
