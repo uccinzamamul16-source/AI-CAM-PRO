@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -131,7 +132,7 @@ internal fun BusinessRecordsScreen(isProjects: Boolean, surface: Color, foregrou
                         Text("Work progress: $doneCount / ${milestones.size} tasks completed", color = RecordGold, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                         if (milestones.isNotEmpty()) {
                             val progress = doneCount.toFloat() / milestones.size.toFloat()
-                            androidx.compose.material3.LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth(), color = RecordGold)
+                            androidx.compose.material3.LinearProgressIndicator(progress = progress, modifier = Modifier.fillMaxWidth(), color = RecordGold)
                         }
                         Text("Work checklist", color = foreground, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
                         milestones.forEach { task ->
