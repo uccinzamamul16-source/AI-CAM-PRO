@@ -1,6 +1,25 @@
 package com.dreamhome.aicampro
 
 import android.os.Bundle
+import java.util.Locale
+import java.text.SimpleDateFormat
+import java.io.File
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.core.content.ContextCompat
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.platform.LocalContext
+import androidx.camera.view.PreviewView
+import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.core.Preview
+import androidx.camera.core.ImageCaptureException
+import androidx.camera.core.ImageCapture
+import androidx.camera.core.CameraSelector
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.compose.rememberLauncherForActivityResult
+import android.widget.Toast
+import android.os.Environment
+import android.content.pm.PackageManager
+import android.Manifest
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
@@ -268,7 +287,9 @@ private fun ModuleDetailScreen(
         }
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding).padding(20.dp)) {
-            if (module.title == "Measurements") {
+            if (module.title == "Camera Studio") {
+                CameraStudioScreen(surface = surface, foreground = foreground, muted = muted)
+            } else if (module.title == "Measurements") {
                 MeasurementCalculator(surface = surface, foreground = foreground, muted = muted)
             } else {
                 Icon(module.icon, contentDescription = null, tint = Gold, modifier = Modifier.size(42.dp))
@@ -359,5 +380,101 @@ private fun ResultLine(label: String, value: String, foreground: Color, muted: C
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
         Text(label, color = muted, fontSize = 13.sp)
         Text(value, color = foreground, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+    }
+}
+
+
+@Composable
+private fun CameraStudioScreen(surface: Color, foreground: Color, muted: Color) {
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var hasCameraPermission by remember {
+        mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED)
+    }
+    var imageCapture by remember { mutableStateOf<ImageCapture?>(null) }
+    var cameraMessage by remember { mutableStateOf("Camera permission is required to take photos.") }
+    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        hasCameraPermission = granted
+        cameraMessage = if (granted) "Camera is ready." else "Camera permission was not granted. Enable it in app settings to use Camera Studio."
+    }
+
+    Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text("Camera Studio", color = foreground, fontSize = 23.sp, fontWeight = FontWeight.Bold)
+        Text("Capture photos directly inside AI CAM PRO. Images stay in this app's local media folder.", color = muted, fontSize = 13.sp)
+        if (hasCameraPermission) {
+            AndroidView(
+                factory = { ctx ->
+                    val previewView = PreviewView(ctx).apply {
+                        scaleType = PreviewView.ScaleType.FILL_CENTER
+                    }
+                    val cameraProviderFuture = ProcessCameraProvider.getInstance(ctx)
+                    cameraProviderFuture.addListener({
+                        try {
+                            val cameraProvider = cameraProviderFuture.get()
+                            val preview = Preview.Builder().build().also { it.setSurfaceProvider(previewView.surfaceProvider) }
+                            val capture = ImageCapture.Builder()
+                                .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
+                                .build()
+                            cameraProvider.unbindAll()
+                            cameraProvider.bindToLifecycle(
+                                lifecycleOwner,
+                                CameraSelector.DEFAULT_BACK_CAMERA,
+                                preview,
+                                capture
+                            )
+                            imageCapture = capture
+                            cameraMessage = "Camera ready. Tap Capture Photo."
+                        } catch (error: Exception) {
+                            cameraMessage = "Unable to start camera: " + (error.message ?: "unknown error")
+                        }
+                    }, ContextCompat.getMainExecutor(ctx))
+                    previewView
+                },
+                modifier = Modifier.fillMaxWidth().weight(1f)
+            )
+            Card(colors = CardDefaults.cardColors(containerColor = surface), shape = RoundedCornerShape(12.dp)) {
+                Text(cameraMessage, color = muted, fontSize = 12.sp, modifier = Modifier.padding(12.dp))
+            }
+            androidx.compose.material3.Button(
+                onClick = {
+                    val capture = imageCapture
+                    if (capture == null) {
+                        cameraMessage = "Camera is still starting. Please wait."
+                    } else {
+                        val folder = File(context.getExternalFilesDir(Environment.DIRECTORY_PICTURES) ?: context.filesDir, "AI_CAM_PRO")
+                        if (!folder.exists()) folder.mkdirs()
+                        val stamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(System.currentTimeMillis())
+                        val photoFile = File(folder, "AICAM_$stamp.jpg")
+                        val output = ImageCapture.OutputFileOptions.Builder(photoFile).build()
+                        capture.takePicture(output, ContextCompat.getMainExecutor(context), object : ImageCapture.OnImageSavedCallback {
+                            override fun onImageSaved(result: ImageCapture.OutputFileResults) {
+                                cameraMessage = "Photo saved: " + photoFile.name
+                                Toast.makeText(context, "Photo saved in AI CAM PRO", Toast.LENGTH_SHORT).show()
+                            }
+                            override fun onError(exception: ImageCaptureException) {
+                                cameraMessage = "Photo capture failed: " + (exception.message ?: "Please try again")
+                            }
+                        })
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = imageCapture != null
+            ) {
+                Icon(Icons.Default.PhotoCamera, contentDescription = null)
+                Text("  Capture Photo")
+            }
+        } else {
+            Card(colors = CardDefaults.cardColors(containerColor = surface), shape = RoundedCornerShape(16.dp)) {
+                Column(modifier = Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Icon(Icons.Default.CameraAlt, contentDescription = null, tint = Gold, modifier = Modifier.size(42.dp))
+                    Text("Allow camera access", color = foreground, fontWeight = FontWeight.Bold)
+                    Text(cameraMessage, color = muted, fontSize = 13.sp)
+                    androidx.compose.material3.Button(onClick = { permissionLauncher.launch(Manifest.permission.CAMERA) }) {
+                        Text("Grant Camera Permission")
+                    }
+                }
+            }
+        }
+        Text("Captured photos are stored in app-specific storage. Video recording and editing will be added separately.", color = muted, fontSize = 12.sp)
     }
 }
