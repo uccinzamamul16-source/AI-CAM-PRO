@@ -30,9 +30,24 @@ jobs:
       - name: Assemble debug APK
         run: gradle --no-daemon assembleDebug
 
-      - name: Upload debug APK
+      - name: Verify APK structure, manifest and signature
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="app/build/outputs/apk/debug/app-debug.apk"
+          test -s "$APK"
+          unzip -t "$APK" | tail -n 2
+          BT="$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)"
+          "$BT/apksigner" verify --verbose --print-certs "$APK"
+          "$BT/aapt" dump badging "$APK" | tee apk-badging.txt
+          "$BT/zipalign" -c -v 4 "$APK"
+          grep -q "package: name='com.dreamhome.aicampro'" apk-badging.txt
+
+      - name: Upload debug APK and install diagnostics
         uses: actions/upload-artifact@v4
         with:
-          name: AI-CAM-PRO-debug
-          path: app/build/outputs/apk/debug/app-debug.apk
+          name: AI-CAM-PRO-debug-verified
+          path: |
+            app/build/outputs/apk/debug/app-debug.apk
+            apk-badging.txt
           if-no-files-found: error
