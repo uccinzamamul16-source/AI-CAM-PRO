@@ -14,15 +14,22 @@ Android app for Dream Home Interior Solution.
 
 1. **Dashboard** — entry point for all app modules.
 2. **Camera Studio** — in-app photo/video capture, photo enhancement and editing.
-3. **AI Clothes Changer** — camera/gallery photo input; adult, consent-based virtual outfit replacement; select or upload clothing references; preserve the subject's identity as much as possible. Includes outfit categories such as shirts, T-shirts, trousers, dresses, suits, swimwear and bikinis. This is outfit try-on, not undressing or generating nudity; underwear remains covered. The app must not infer hidden garments.
+3. **AI Clothes Changer** — camera/gallery photo input; adult, consent-based virtual outfit replacement; select or upload clothing references; preserve the subject's identity as much as possible. Includes a broad catalogue for men, women and kids: shirts, T-shirts, trousers, jeans, dresses, gowns, suits, traditional wear, sportswear, jackets, swimwear and more. This is outfit try-on, not undressing or generating nudity; underwear remains covered. The app must not infer hidden garments.
 4. **Background Studio** — keep the original background, choose a built-in background (studio, beach, room, garden, city, etc.), or upload a custom background image. Subject/background compositing should preserve realistic lighting and edges where possible.
-5. **Interior AI Studio** — room redesign concepts for flooring, wall finishes, ceilings, kitchens and bedrooms, aiming to preserve room geometry.
+5. **Interior AI Studio + Interior Design Catalogue** — an automatically browsable catalogue of interior design references, with filters by room, style, colour and design element. Cover living rooms, bedrooms, kitchens, bathrooms, dining rooms, balconies, wardrobes and storage, TV units, doors/windows, furniture, lighting, false ceilings, wall panels, paint/wallpaper, tiles/flooring and bathroom finishes. User can take or upload a room photo, select a catalogue design, preview a redesign on their own room, combine design elements, or upload their own reference image. Aim to preserve room geometry, doors, windows and fixed layout; clearly label generated visuals as design previews, not guaranteed construction drawings. Catalogue can refresh online and allow selected favourites/references to be saved locally for offline viewing.
 6. **Measurement Calculator** — room-wise measurements and estimates for tiles, wastage, putty, paint, cement, sand and other materials.
 7. **Material Rate Manager** — editable material rates and historical rate snapshots for quotations.
 8. **Quotation Maker** — multi-item estimates, cost/markup calculations and customer-facing PDF exports. Internal costs and profit must not appear in customer PDFs. Default markup target: 20%, with a warning below 10%.
 9. **Project Manager** — customer/site records, checklists, progress status and project photos.
 10. **Payments & Accounts** — advances, receipts, balances, expenses and project profitability.
 11. **Private Gallery / LOCK MY ROOM** — PIN-protected local gallery and user-controlled deletion.
+
+## Catalogue behavior
+- Clothes and interior catalogues should provide ready-made choices without requiring the user to upload every design.
+- Catalogue browsing may use an online source/service and must disclose when internet is required.
+- Users may upload their own reference images.
+- Save selected favourites locally where licensing and storage allow.
+- Do not present catalogue reference images as owned designs or guaranteed build specifications.
 
 ## Privacy and safety requirements
 - Camera and gallery access only after user permission.
