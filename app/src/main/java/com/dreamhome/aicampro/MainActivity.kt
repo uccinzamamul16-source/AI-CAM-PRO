@@ -26,6 +26,10 @@ import androidx.camera.video.VideoRecordEvent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.rememberLauncherForActivityResult
 import android.widget.Toast
+import android.webkit.WebChromeClient
+import android.webkit.WebView
+import android.webkit.WebViewClient
+import android.webkit.ValueCallback
 import android.os.Environment
 import android.content.pm.PackageManager
 import android.Manifest
@@ -299,6 +303,8 @@ private fun ModuleDetailScreen(
         Column(modifier = Modifier.fillMaxSize().padding(padding).padding(20.dp)) {
             if (module.title == "Camera Studio") {
                 CameraStudioScreen(surface = surface, foreground = foreground, muted = muted)
+            } else if (module.title == "AI Clothes Changer") {
+                FreeAiTryOnScreen(surface = surface, foreground = foreground, muted = muted)
             } else if (module.title == "Measurements") {
                 MeasurementCalculator(surface = surface, foreground = foreground, muted = muted)
             } else if (module.title == "Customers") {
@@ -339,6 +345,56 @@ private fun ModuleDetailScreen(
     }
 }
 
+
+@Composable
+private fun FreeAiTryOnScreen(surface: Color, foreground: Color, muted: Color) {
+    var uploadCallback by remember { mutableStateOf<ValueCallback<Array<Uri>>?>(null) }
+    val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        uploadCallback?.onReceiveValue(if (uri != null) arrayOf(uri) else null)
+        uploadCallback = null
+    }
+
+    Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text("Free virtual try-on", color = foreground, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+        Text(
+            "Upload a person's photo and a clothing photo in the demo below, then tap Try-on.",
+            color = muted,
+            fontSize = 13.sp
+        )
+        Card(colors = CardDefaults.cardColors(containerColor = surface), shape = RoundedCornerShape(12.dp)) {
+            Text(
+                "Free shared demo: daily limits and waiting queues may apply. Photos are sent to Hugging Face for processing when you upload them. Use only photos you have permission to use. This research model is licensed for non-commercial use only.",
+                color = muted,
+                fontSize = 11.sp,
+                modifier = Modifier.padding(12.dp)
+            )
+        }
+        AndroidView(
+            factory = { ctx ->
+                WebView(ctx).apply {
+                    settings.javaScriptEnabled = true
+                    settings.domStorageEnabled = true
+                    settings.allowFileAccess = false
+                    webViewClient = WebViewClient()
+                    webChromeClient = object : WebChromeClient() {
+                        override fun onShowFileChooser(
+                            webView: WebView?,
+                            filePathCallback: ValueCallback<Array<Uri>>?,
+                            fileChooserParams: FileChooserParams?
+                        ): Boolean {
+                            uploadCallback?.onReceiveValue(null)
+                            uploadCallback = filePathCallback
+                            imagePicker.launch("image/*")
+                            return true
+                        }
+                    }
+                    loadUrl("https://yisol-idm-vton.hf.space/")
+                }
+            },
+            modifier = Modifier.fillMaxWidth().weight(1f)
+        )
+    }
+}
 
 @Composable
 private fun MeasurementCalculator(surface: Color, foreground: Color, muted: Color) {
