@@ -35,6 +35,7 @@ import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.security.MessageDigest
 
 private val ToolGold = Color(0xFFD2AA58)
 
@@ -192,13 +193,15 @@ internal fun PrivateGalleryScreen(surface: Color, foreground: Color, muted: Colo
         Text("Private Gallery", color = foreground, fontSize = 22.sp, fontWeight = FontWeight.Bold)
         Text("Photos copied here are stored in this app's private internal folder, not the public gallery.", color = muted, fontSize = 12.sp)
         if (!unlocked) {
-            val hasPin = !prefs.getString("pin", null).isNullOrBlank()
+            val storedHash = prefs.getString("pin_hash", null)
+            val hasPin = !storedHash.isNullOrBlank()
             OutlinedTextField(pin, { pin = it.filter(Char::isDigit).take(8) }, label = { Text(if (hasPin) "Enter PIN" else "Create PIN (4–8 digits)") }, singleLine = true, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
             Button(onClick = {
+                val enteredHash = MessageDigest.getInstance("SHA-256").digest(pin.toByteArray()).joinToString("") { "%02x".format(it) }
                 if (pin.length !in 4..8) message = "PIN must be 4 to 8 digits."
-                else if (hasPin && pin != prefs.getString("pin", null)) message = "Incorrect PIN."
+                else if (hasPin && enteredHash != storedHash) message = "Incorrect PIN."
                 else {
-                    if (!hasPin) prefs.edit().putString("pin", pin).apply()
+                    if (!hasPin) prefs.edit().putString("pin_hash", enteredHash).apply()
                     unlocked = true
                     pin = ""
                     message = if (hasPin) "Gallery unlocked." else "PIN created. Keep it safe; there is no PIN recovery."
@@ -292,5 +295,28 @@ internal fun BackupRestoreScreen(surface: Color, foreground: Color, muted: Color
             Text(message, color = foreground, fontSize = 12.sp, modifier = Modifier.padding(12.dp))
         }
         Text("Keep backups private: they can include customer records, transactions and private photos. Import currently stages files for safe manual recovery; it does not replace live databases.", color = muted, fontSize = 11.sp)
+    }
+}
+
+@Composable
+internal fun AppAppearanceScreen(
+    darkTheme: Boolean,
+    onToggleTheme: () -> Unit,
+    surface: Color,
+    foreground: Color,
+    muted: Color
+) {
+    Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text("App Appearance", color = foreground, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+        Text("Choose the look of your workspace.", color = muted, fontSize = 12.sp)
+        Card(colors = CardDefaults.cardColors(containerColor = surface), shape = RoundedCornerShape(14.dp)) {
+            Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(if (darkTheme) "Black & Gold theme is active" else "White & Gold theme is active", color = foreground, fontWeight = FontWeight.SemiBold)
+                Button(onClick = onToggleTheme, modifier = Modifier.fillMaxWidth()) {
+                    Text(if (darkTheme) "Switch to White & Gold" else "Switch to Black & Gold")
+                }
+            }
+        }
+        Text("Theme selection applies immediately. Current selection lasts until the app process is restarted.", color = muted, fontSize = 11.sp)
     }
 }
